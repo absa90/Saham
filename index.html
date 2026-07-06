@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سامانه مدیریت و تسهیم مالکیت املاک</title>
+    <!-- بارگذاری React و ReactDOM نسخه 18 به صورت تک‌فایلی -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- بارگذاری کامپایلر بابل برای اجرای سینتکس JSX در مرورگر اندروید -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- بارگذاری موتور استایل‌دهی Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap');
+        body { font-family: 'Vazirmatn', sans-serif; }
+        .toast-enter { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 min-h-screen antialiased">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        // ─── Utility Functions ───
+        const generateId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+        const gcd = (a, b) => {
+            a = Math.abs(Math.round(a));
+            b = Math.abs(Math.round(b));
+            while (b) { [a, b] = [b, a % b]; }
+            return a || 1;
+        };
+
+        const simplifyFraction = (num, den) => {
+            const g = gcd(num, den);
+            return { num: num / g, den: den / g };
+        };
+
+        const formatFraction = (num, den) => {
+            const s = simplifyFraction(num, den);
+            return `${s.num} از ${s.den}`;
+        };
+
+        // ─── Toast Component ───
+        function Toast({ message, type, onClose }) {
+            useEffect(() => {
+                const t = setTimeout(onClose, 3000);
+                return () => clearTimeout(t);
+            }, [onClose]);
+
+            const colors = {
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-red-600 text-white',
+                info: 'bg-indigo-600 text-white',
+            };
+
+            return (
+                <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 ${colors[type]} px-6 py-3.5 rounded-2xl shadow-2xl toast-enter flex items-center gap-3 text-sm font-medium max-w-[90vw]`}>
+                    <span>{type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
+                    <span>{message}</span>
+                </div>
+            );
+        }
+
+        // ─── Confirm Dialog ───
+        function ConfirmDialog({ message, onConfirm, onCancel }) {
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onCancel}>
+                    <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+                        <div className="text-5xl text-center mb-4">⚠️</div>
+                        <p className="text-center text-gray-800 text-lg font-medium mb-8">{message}</p>
+                        <div className="flex gap-3">
+                            <button onClick={onConfirm} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-2xl font-semibold transition-all active:scale-95">
+                                بله، حذف شود
+                            </button>
+                            <button onClick={onCancel} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-2xl font-semibold transition-all active:scale-95">
+                                انصراف
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── Main App ───
+        function App() {
+            const [activeTab, setActiveTab] = useState('form1');
+            const [area, setArea] = useState(0);
+            const [owners, setOwners] = useState([]);
+            const [transfers, setTransfers] = useState([]);
+            const [finalOwners, setFinalOwners] = useState([]);
+            const [toast, setToast] = useState(null);
+            const [confirmDialog, setConfirmDialog] = useState(null);
+
+            // Form 1
+            const [f1Name, setF1Name] = useState('');
+            const [f1Num, setF1Num] = useState('');
+            const [f1Den, setF1Den] = useState('');
+            const [f1Date, setF1Date] = useState('');
+            const [f1Notes, setF1Notes] = useState('');
+
+            // Form 2
+            const [f2Seller, setF2Seller] = useState('');
+            const [f2Buyer, setF2Buyer] = useState('');
+            const [f2Num, setF2Num] = useState('');
+            const [f2Den, setF2Den] = useState('');
+            const [f2Date, setF2Date] = useState('');
+            const [f2Notes, setF2Notes] = useState('');
+
+            const allNames = Array.from(new Set([
+                ...owners.map(o => o.name),
+                ...transfers.map(t => t.sellerName),
+                ...transfers.map(t => t.buyerName),
+            ])).filter(Boolean).sort();
+
+            useEffect(() => {
+                try {
+                    const d = localStorage.getItem('propertyAppData');
+                    if (d) {
+                        const parsed = JSON.parse(d);
+                        if (parsed.area) setArea(parsed.area);
+                        if (parsed.owners) setOwners(parsed.owners);
+                        if (parsed.transfers) setTransfers(parsed.transfers);
+                    }
+                } catch (e) { }
+            }, []);
+
+            useEffect(() => {
+                if(owners.length > 0 || transfers.length > 0 || area > 0) {
+                    localStorage.setItem('propertyAppData', JSON.stringify({ area, owners, transfers }));
+                }
+            }, [area, owners, transfers]);
+
+            const calculate = useCallback(() => {
+                const ownership = new Map();
+
+                owners.forEach(o => {
+                    const frac = o.shareNumerator / o.shareDenominator;
+                    ownership.set(o.name, (ownership.get(o.name) || 0) + frac);
+                });
+
+                transfers.forEach(t => {
+                    const frac = t.transferredNumerator / t.transferredDenominator;
+                    const sellerCurrent = ownership.get(t.sellerName) || 0;
+                    ownership.set(t.sellerName, sellerCurrent - frac);
+                    const buyerCurrent = ownership.get(t.buyerName) || 0;
+                    ownership.set(t.buyerName, buyerCurrent + frac);
+                });
+
+                const results = [];
+                const totalArea = area || 0;
+
+                ownership.forEach((frac, name) => {
+                    if (frac > 0.00001) {
+                        const den = 10000;
+                        const num = Math.round(frac * den);
+                        const s = simplifyFraction(num, den);
+                        const pct = Math.round(frac * 10000) / 100;
+
+                        results.push({
+                            name,
+                            shareNumerator: s.num,
+                            shareDenominator: s.den,
+                            area: Math.round(frac * totalArea * 100) / 100,
+                            percentage: pct,
+                        });
+                    }
+                });
+
+                results.sort((a, b) => b.percentage - a.percentage);
+                setFinalOwners(results);
+            }, [owners, transfers, area]);
+
+            useEffect(() => { calculate(); }, [calculate]);
+
+            const getCurrentFraction = (name) => {
+                let frac = 0;
+                owners.forEach(o => { if (o.name === name) frac += o.shareNumerator / o.shareDenominator; });
+                transfers.forEach(t => {
+                    const tf = t.transferredNumerator / t.transferredDenominator;
+                    if (t.sellerName === name) frac -= tf;
+                    if (t.buyerName === name) frac += tf;
+                });
+                return Math.max(0, frac);
+            };
+
+            const addOwner = () => {
+                const name = f1Name.trim();
+                const num = parseInt(f1Num) || 0;
+                const den = parseInt(f1Den) || 0;
+
+                if (!name) { showToast('لطفاً نام مالک را وارد کنید', 'error'); return; }
+                if (num <= 0 || den <= 0) { showToast('سهم جزء و سهم کل باید بزرگتر از صفر باشند', 'error'); return; }
+                if (num > den) { showToast('سهم جزء نمی‌تواند بیشتر از سهم کل باشد', 'error'); return; }
+
+                const newOwner = {
+                    id: generateId(),
+                    name,
+                    shareNumerator: num,
+                    shareDenominator: den,
+                    acquisitionDate: f1Date || '-',
+                    notes: f1Notes.trim(),
+                };
+
+                setOwners(prev => [...prev, newOwner]);
+                setF1Name(''); setF1Num(''); setF1Den(''); setF1Date(''); setF1Notes('');
+                showToast(`مالک «${name}» با سهم ${num} از ${den} ثبت شد`, 'success');
+            };
+
+            const deleteOwner = (id) => {
+                const owner = owners.find(o => o.id === id);
+                if (!owner) return;
+                setConfirmDialog({
+                    message: `آیا مالک «${owner.name}» حذف شود؟`,
+                    action: () => {
+                        setOwners(prev => prev.filter(o => o.id !== id));
+                        showToast(`مالک «${owner.name}» حذف شد`, 'info');
+                    }
+                });
+            };
+
+            const addTransfer = () => {
+                const seller = f2Seller.trim();
+                const buyer = f2Buyer.trim();
+                const num = parseInt(f2Num) || 0;
+                const den = parseInt(f2Den) || 0;
+
+                if (!seller) { showToast('لطفاً فروشنده را انتخاب کنید', 'error'); return; }
+                if (!buyer) { showToast('لطفاً نام خریدار را وارد کنید', 'error'); return; }
+                if (seller === buyer) { showToast('فروشنده و خریدار نمی‌توانند یکی باشند', 'error'); return; }
+                if (num <= 0 || den <= 0) { showToast('سهم انتقال باید بزرگتر از صفر باشد', 'error'); return; }
+                if (num > den) { showToast('سهم جزء نمی‌تواند بیشتر از سهم کل باشد', 'error'); return; }
+
+                const transferFrac = num / den;
+                const sellerCurrent = getCurrentFraction(seller);
+
+                if (transferFrac > sellerCurrent + 0.00001) {
+                    showToast(`سهم فروشنده کافی نیست! سهم فعلی: ${(sellerCurrent * 100).toFixed(2)}%`, 'error');
+                    return;
+                }
+
+                const newTransfer = {
+                    id: generateId(),
+                    sellerName: seller,
+                    buyerName: buyer,
+                    transferredNumerator: num,
+                    transferredDenominator: den,
+                    transferDate: f2Date || '-',
+                    notes: f2Notes.trim(),
+                };
+
+                setTransfers(prev => [...prev, newTransfer]);
+                setF2Seller(''); setF2Buyer(''); setF2Num(''); setF2Den(''); setF2Date(''); setF2Notes('');
+                showToast(`انتقال ${num} از ${den} از «${seller}» به «${buyer}» ثبت شد`, 'success');
+            };
+
+            const deleteTransfer = (id) => {
+                setConfirmDialog({
+                    message: 'آیا این انتقال حذف شود؟',
+                    action: () => {
+                        setTransfers(prev => prev.filter(t => t.id !== id));
+                        showToast('انتقال حذف شد', 'info');
+                    }
+                });
+            };
+
+            const resetAll = () => {
+                setConfirmDialog({
+                    message: 'تمام اطلاعات (مالکین، انتقال‌ها، مساحت) پاک خواهند شد. ادامه می‌دهید؟',
+                    action: () => {
+                        setOwners([]); setTransfers([]); setArea(0);
+                        localStorage.removeItem('propertyAppData');
+                        showToast('تمام اطلاعات پاک شد', 'info');
+                    }
+                });
+            };
+
+            const exportDatabase = () => {
+                try {
+                    const dataStr = JSON.stringify({ area, owners, transfers }, null, 2);
+                    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                    const exportFileDefaultName = `property_backup_${new Date().toISOString().slice(0,10)}.json`;
+                    
+                    const linkElement = document.createElement('a');
+                    linkElement.setAttribute('href', dataUri);
+                    linkElement.setAttribute('download', exportFileDefaultName);
+                    linkElement.click();
+                    showToast('فایل پشتیبان دانلود شد', 'success');
+                } catch { showToast('خطا در استخراج داده‌ها', 'error'); }
+            };
+
+            const handleImportDatabase = (event) => {
+                const fileReader = new FileReader();
+                const file = event.target.files?.[0];
+                if (!file) return;
+                fileReader.onload = (e) => {
+                    try {
+                        const parsedData = JSON.parse(e.target?.result);
+                        if (parsedData && (parsedData.owners || parsedData.transfers || parsedData.area !== undefined)) {
+                            if (parsedData.area) setArea(parsedData.area);
+                            if (parsedData.owners) setOwners(parsedData.owners);
+                            if (parsedData.transfers) setTransfers(parsedData.transfers);
+                            showToast('اطلاعات بازیابی شد', 'success');
+                        } else { showToast('فرمت فایل معتبر نیست', 'error'); }
+                    } catch { showToast('خطا در خواندن فایل JSON', 'error'); }
+                };
+                fileReader.readAsText(file);
+                event.target.value = '';
+            };
+
+            const showToast = (message, type) => { setToast({ message, type }); };
+            const currentOwners = allNames.filter(name => getCurrentFraction(name) > 0.00001);
+
+            return (
+                <div>
+                    {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+                    {confirmDialog && <ConfirmDialog message={confirmDialog.message} onConfirm={() => { confirmDialog.action(); setConfirmDialog(null); }} onCancel={() => setConfirmDialog(null)} />}
+
+                    {/* ─── HEADER ─── */}
+                    <header className="bg-gradient-to-l from-indigo-700 via-indigo-600 to-violet-700 text-white shadow-xl no-print">
+                        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-2xl">🏠</div>
+                                    <div>
+                                        <h1 className="text-xl font-bold">سامانه مدیریت مشاعی املاک</h1>
+                                        <p className="text-indigo-200 text-xs mt-0.5">محاسبه هوشمند سهم و ماتریس انتقال کسرها</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={exportDatabase} className="p-2 px-3 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-100 rounded-xl text-xs flex items-center gap-1.5 border border-emerald-500/30">📥 خروجی بکاپ</button>
+                                    <label className="p-2 px-3 bg-blue-500/20 hover:bg-blue-500/40 text-blue-100 rounded-xl text-xs flex items-center gap-1.5 border border-blue-500/30 cursor-pointer">
+                                        📤 بارگذاری بکاپ
+                                        <input type="file" accept=".json" onChange={handleImportDatabase} className="hidden" />
+                                    </label>
+                                    <button onClick={resetAll} className="p-2 px-3 bg-red-500/20 hover:bg-red-500/40 text-red-100 rounded-xl text-xs flex items-center gap-1.5 border border-red-500/30">🗑️ ریست</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* TABS */}
+                        <div className="max-w-6xl mx-auto px-4">
+                            <div className="flex gap-1 bg-white/10 p-1 rounded-t-2xl overflow-x-auto">
+                                {[
+                                    { key: 'form1', label: 'ثبت مالکین اولیه', icon: '📋' },
+                                    { key: 'form2', label: 'انتقال سهم زنجیره‌ای', icon: '🔄' },
+                                    { key: 'form3', label: 'گزارش نهایی سهام', icon: '📊' },
+                                    { key: 'help', label: 'راهنما', icon: '❓' }
+                                ].map(tab => (
+                                    <button key={tab.key} onClick={() => setActiveTab(tab.key)} className={`flex-1 min-w-[120px] py-3 text-xs font-semibold rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-1.5 ${activeTab === tab.key ? 'bg-white text-indigo-700 shadow-lg font-bold' : 'text-white/80 hover:bg-white/10'}`}>
+                                        <span>{tab.icon}</span><span>{tab.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* ─── MAIN CONTENT ─── */}
+                    <main className="max-w-6xl mx-auto px-4 py-6">
+                        
+                        {/* TAB 1 */}
+                        {activeTab === 'form1' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 no-print">
+                                <div className="lg:col-span-2 bg-white rounded-3xl shadow-xl p-6 border border-gray-100">
+                                    <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span>۱</span> ثبت سهم مادر یا اولیه</h2>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">مساحت کل ملک (متر مربع)</label>
+                                            <input type="number" value={area || ''} onChange={e => setArea(parseFloat(e.target.value) || 0)} placeholder="مثلاً ۵۰۰" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-indigo-500 text-center font-bold text-lg" />
+                                        </div>
+                                        <hr className="border-dashed border-gray-200" />
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">نام مالک اولیه</label>
+                                            <input type="text" value={f1Name} onChange={e => setF1Name(e.target.value)} placeholder="علی رضایی" list="f1-names" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-indigo-500" />
+                                            <datalist id="f1-names">{allNames.map(n => <option key={n} value={n} />)}</datalist>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-600 mb-1">سهم کسر (صورت)</label>
+                                                <input type="number" value={f1Num} onChange={e => setF1Num(e.target.value)} placeholder="صورت" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-center" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-600 mb-1">از کل سهم (مخرج)</label>
+                                                <input type="number" value={f1Den} onChange={e => setF1Den(e.target.value)} placeholder="مخرج" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-center" />
+                                            </div>
+                                        </div>
+                                        
+                                        {/* میانبرهای کسر */}
+                                        <div className="flex gap-2 justify-center">
+                                            <button type="button" onClick={() => setF1Den('6')} className="text-[11px] bg-slate-100 hover:bg-indigo-50 px-2 py-1 rounded-lg">مبنای ۶ دانگ</button>
+                                            <button type="button" onClick={() => setF1Den('100')} className="text-[11px] bg-slate-100 hover:bg-indigo-50 px-2 py-1 rounded-lg">مبنای ۱۰۰ (درصد)</button>
+                                            <button type="button" onClick={() => setF1Den('10000')} className="text-[11px] bg-slate-100 hover:bg-indigo-50 px-2 py-1 rounded-lg">۱۰,۰۰۰ سهمی</button>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">تاریخ سند / مبدا</label>
+                                            <input type="text" value={f1Date} onChange={e => setF1Date(e.target.value)} placeholder="مثلاً ۱۴۰۲/۰۶/۱۵" className="w-full px-4 py-3 border border-gray-200 rounded-xl" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">توضیحات</label>
+                                            <textarea value={f1Notes} onChange={e => setF1Notes(e.target.value)} rows="2" placeholder="اختیاری..." className="w-full px-4 py-2 border border-gray-200 rounded-xl resize-none"></textarea>
+                                        </div>
+
+                                        {/* نمایش میزان سهم باقی مانده آزاد */}
+                                        {owners.length > 0 && (
+                                            <div className="p-3 bg-amber-50 text-amber-800 rounded-xl text-xs space-y-1">
+                                                <div className="flex justify-between"><span>مجموع سهم ثبت شده:</span><span className="font-bold">{owners.reduce((acc, o) => acc + (o.shareNumerator/o.shareDenominator), 0) * 100}%</span></div>
+                                            </div>
+                                        )}
+
+                                        <button onClick={addOwner} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-sm transition-all">+ افزودن مالک اولیه</button>
+                                    </div>
+                                </div>
+                                <div className="lg:col-span-3 bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center"><span className="font-bold text-gray-700 text-sm">لیست مالکین مبدا</span><span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">{owners.length} ردیف</span></div>
+                                    {owners.length === 0 ? <div className="p-12 text-center text-gray-400 text-sm">هیچ مالک اولیه‌ای ثبت نشده است.</div> : (
+                                        <div className="overflow-x-auto text-sm">
+                                            <table className="w-full text-right">
+                                                <thead className="bg-slate-50 text-gray-500 border-b border-gray-100"><tr><th className="p-3">نام مالک</th><th className="p-3">میزان سهم کسر</th><th className="p-3">تاریخ مبدا</th><th className="p-3 text-center">حذف</th></tr></thead>
+                                                <tbody class="divide-y divide-gray-100">
+                                                    {owners.map(o => (
+                                                        <tr key={o.id} className="hover:bg-slate-50/50">
+                                                            <td className="p-3 font-bold text-gray-900">{o.name}</td>
+                                                            <td className="p-3"><span className="bg-slate-100 px-2 py-0.5 rounded text-xs">{formatFraction(o.shareNumerator, o.shareDenominator)}</span></td>
+                                                            <td className="p-3 text-gray-500">{o.acquisitionDate}</td>
+                                                            <td className="p-3 text-center"><button onClick={() => deleteOwner(o.id)} className="text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg">❌</button></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 2 */}
+                        {activeTab === 'form2' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 no-print">
+                                <div className="lg:col-span-2 bg-white rounded-3xl shadow-xl p-6 border border-gray-100">
+                                    <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span>۲</span> ثبت انتقال یا معامله زنجیره‌ای</h2>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">فروشنده</label>
+                                            <select value={f2Seller} onChange={e => setF2Seller(e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white focus:outline-indigo-500">
+                                                <option value="">-- انتخاب فروشنده --</option>
+                                                {currentOwners.map(name => <option key={name} value={name}>{name} (سهم فعلی: {(getCurrentFraction(name) * 100).toFixed(1)}%)</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">خریدار جدید یا موجود</label>
+                                            <input type="text" value={f2Buyer} onChange={e => setF2Buyer(e.target.value)} placeholder="نام خریدار" list="f2-buyers" className="w-full px-4 py-3 border border-gray-200 rounded-xl" />
+                                            <datalist id="f2-buyers">{allNames.map(n => <option key={n} value={n} />)}</datalist>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-600 mb-1">سهم انتقال (صورت)</label>
+                                                <input type="number" value={f2Num} onChange={e => setF2Num(e.target.value)} placeholder="مثلاً ۲" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-center" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-600 mb-1">از کل (مخرج)</label>
+                                                <input type="number" value={f2Den} onChange={e => setF2Den(e.target.value)} placeholder="مثلاً ۶" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-center" />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2 justify-center">
+                                            <button type="button" onClick={() => setF2Den('6')} className="text-[11px] bg-slate-100 hover:bg-indigo-50 px-2 py-1 rounded-lg">مبنای ۶ دانگ</button>
+                                            <button type="button" onClick={() => setF2Den('100')} className="text-[11px] bg-slate-100 hover:bg-indigo-50 px-2 py-1 rounded-lg">مبنای ۱۰۰ (درصد)</button>
+                                            <button type="button" onClick={() => setF2Den('10000')} className="text-[11px] bg-slate-100 hover:bg-indigo-50 px-2 py-1 rounded-lg">۱۰,۰۰۰ سهمی</button>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">تاریخ معامله</label>
+                                            <input type="text" value={f2Date} onChange={e => setF2Date(e.target.value)} placeholder="۱۴۰۴/۰۲/۲۰" className="w-full px-4 py-3 border border-gray-200 rounded-xl" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">توضیحات توافق</label>
+                                            <textarea value={f2Notes} onChange={e => setF2Notes(e.target.value)} rows="2" placeholder="بابت بیع، دستدار و..." className="w-full px-4 py-2 border border-gray-200 rounded-xl resize-none"></textarea>
+                                        </div>
+                                        <button onClick={addTransfer} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-sm transition-all">🔄 ثبت انتقال معامله</button>
+                                    </div>
+                                </div>
+                                <div className="lg:col-span-3 bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center"><span className="font-bold text-gray-700 text-sm">گردش انتقالات ثبت شده</span><span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">{transfers.length} انتقال</span></div>
+                                    {transfers.length === 0 ? <div className="p-12 text-center text-gray-400 text-sm">هنوز هیچ انتقال یا جابه‌جایی سهمی ثبت نشده است.</div> : (
+                                        <div className="overflow-x-auto text-sm">
+                                            <table className="w-full text-right">
+                                                <thead className="bg-slate-50 text-gray-500 border-b border-gray-100"><tr><th className="p-3">فروشنده</th><th className="p-3">میزان سهم</th><th className="p-3">خریدار</th><th className="p-3 text-center">حذف</th></tr></thead>
+                                                <tbody class="divide-y divide-gray-100">
+                                                    {transfers.map(t => (
+                                                        <tr key={t.id} className="hover:bg-slate-50/50">
+                                                            <td className="p-3 font-bold text-red-600">{t.sellerName}</td>
+                                                            <td className="p-3"><span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs">{formatFraction(t.transferredNumerator, t.transferredDenominator)}</span></td>
+                                                            <td className="p-3 font-bold text-emerald-600">{t.buyerName}</td>
+                                                            <td className="p-3 text-center"><button onClick={() => deleteTransfer(t.id)} className="text-gray-400 hover:text-red-500 px-2 py-1 rounded-lg">🗑️</button></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 3 */}
+                        {activeTab === 'form3' && (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100 no-print">
+                                    <span className="text-gray-500 text-xs">برای تهیه پرینت فیزیکی یا خروجی PDF روی دکمه مقابل بزنید.</span>
+                                    <button onClick={() => window.print()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5">🖨️ چاپ صورت‌جلسه نهایی</button>
+                                </div>
+
+                                <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-10 border border-gray-100 print:shadow-none print:border-none print:p-0">
+                                    <div className="text-center pb-6 border-b-2 border-gray-100 mb-6">
+                                        <h2 className="text-xl sm:text-2xl font-black text-gray-900">جدول تسهیم و خلاصه سهم پایانی مالکین ملک</h2>
+                                        <div className="flex justify-center gap-6 mt-3 text-xs text-gray-500">
+                                            {area > 0 && <div>مساحت کل عرصه: <span className="font-bold text-gray-900">{area}</span> متر مربع</div>}
+                                            <div>تعداد مالکین نهایی: <span className="font-bold text-gray-900">{finalOwners.length} نفر</span></div>
+                                        </div>
+                                    </div>
+
+                                    {finalOwners.length === 0 ? <div className="p-12 text-center text-gray-400 text-sm">هیچ اطلاعاتی برای محاسبه خروجی وجود ندارد.</div> : (
+                                        <div className="overflow-x-auto text-sm">
+                                            <table className="w-full text-right border-collapse">
+                                                <thead>
+                                                    <tr className="bg-indigo-50 text-indigo-900 border-b border-indigo-100 print:bg-slate-100 print:text-black">
+                                                        <th className="p-3 font-bold">ردیف</th>
+                                                        <th className="p-3 font-bold">نام و نام خانوادگی مالک نهایی</th>
+                                                        <th className="p-3 font-bold">کسر ساده شده نهایی</th>
+                                                        <th className="p-3 font-bold">درصد سهم (%)</th>
+                                                        {area > 0 && <th className="p-3 font-bold">متراژ اختصاصی (متر مربع)</th>}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100 text-gray-800">
+                                                    {finalOwners.map((fo, idx) => (
+                                                        <tr key={fo.name} className="hover:bg-slate-50/50">
+                                                            <td className="p-3 text-gray-400">{idx + 1}</td>
+                                                            <td className="p-3 font-bold text-gray-900">{fo.name}</td>
+                                                            <td className="p-3"><span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded text-xs print:bg-transparent">{formatFraction(fo.shareNumerator, fo.shareDenominator)}</span></td>
+                                                            <td className="p-3 font-bold text-indigo-700 print:text-black">{fo.percentage.toFixed(2)} %</td>
+                                                            {area > 0 && <td className="p-3 font-bold text-emerald-600 print:text-black">{fo.area.toLocaleString()} مـتر</td>}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            
+                                            {/* بخش امضاء چاپی */}
+                                            <div className="hidden print:block mt-16">
+                                                <div className="text-[10px] text-gray-400 text-left mb-6">تاریخ گزارش: {new Date().toLocaleDateString('fa-IR')}</div>
+                                                <div className="grid grid-cols-3 gap-4 text-center font-bold text-xs">
+                                                    <div>امضاء و اثر انگشت خریداران/فروشندگان</div>
+                                                    <div>تایید و امضاء کارشناس سیستم</div>
+                                                    <div>شهود و معتمدین محلی</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 4 */}
+                        {activeTab === 'help' && (
+                            <div className="bg-white rounded-3xl shadow-xl p-6 border border-gray-100 max-w-2xl mx-auto text-sm no-print">
+                                <h2 className="text-lg font-bold text-gray-900 mb-3">راهنمای کاربری سریع سیستم محاسبات مشاعی</h2>
+                                <div className="space-y-3 text-gray-600 leading-relaxed">
+                                    <p>این نرم‌افزار به صورت کامل بر روی مرورگر گوشی اندروید شما پردازش می‌شود.</p>
+                                    <div className="bg-slate-50 p-4 rounded-xl space-y-2 border border-gray-100">
+                                        <h3 className="font-bold text-indigo-700">🔒 حریم خصوصی داده‌ها:</h3>
+                                        <p className="text-xs text-gray-500">تمامی داده‌های شما در بستر LocalStorage مرورگر ذخیره شده و به هیچ وجه به اینترنت ارسال نمی‌گردد. برای پیشگیری از حذف داده‌ها هنگام پاک کردن کَش مرورگر، حتماً با دکمه "خروجی بکاپ" در هدر، دیتابیس خود را دانلود و ذخیره کنید.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                    </main>
+                </div>
+            );
+        }
+
+        // رندر کردن نهایی اپلیکیشن بر روی پلتفرم تک‌فایلی
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
