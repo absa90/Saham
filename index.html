@@ -375,4 +375,358 @@
                                                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 border-transparent'
                                         }`}
                                     >
-                                 
+                                        <span>{tab.icon}</span>
+                                        <span>{tab.title}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* ─── بدنه اصلی برنامه‌ ─── */}
+                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+
+                        {/* فرم ۱: مالکین اولیه */}
+                        {activeTab === 'form1' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 no-print">
+                                <div className="lg:col-span-2 bg-white border border-slate-200 shadow-sm rounded-xl p-5">
+                                    <h2 className="text-sm font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+                                        <span className="w-5 h-5 bg-blue-100 text-blue-700 text-xs font-black rounded-md flex items-center justify-center">۱</span>
+                                        مشخصات ثبتی و ملک مادر
+                                    </h2>
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-600 mb-1">شماره کلاسه/پلاک ثبتی</label>
+                                                <input type="text" value={propertyId} onChange={e => setPropertyId(e.target.value)} placeholder="مثلا ۱۲۴/۴" className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-blue-600" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-600 mb-1">مساحت کل عرصه (متر مربع)</label>
+                                                <input type="number" value={area || ''} onChange={e => setArea(parseFloat(e.target.value) || 0)} placeholder="مثلاً ۴۲۰.۵" className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-blue-600 font-bold text-slate-900" />
+                                            </div>
+                                        </div>
+
+                                        <h2 className="text-sm font-bold text-slate-900 pt-2 mb-2 flex items-center gap-2">🔹 ورود اطلاعات مالکین اولیه</h2>
+                                        
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-600 mb-1">نام و نام خانوادگی مالک اولیه</label>
+                                            <input type="text" value={f1Name} onChange={e => setF1Name(e.target.value)} placeholder="نام شخص حقیقی یا حقوقی مبدا" className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-blue-600" />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-600 mb-1">میزان سهم (صورت کسر)</label>
+                                                <input type="number" value={f1Num} onChange={e => setF1Num(e.target.value)} placeholder="مثال: ۳" className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-lg text-center" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-600 mb-1">از کل سهام (مخرج کسر)</label>
+                                                <input type="number" value={f1Den} onChange={e => setF1Den(e.target.value)} placeholder="مثال: ۶" className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-lg text-center" />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-1.5 justify-center py-1">
+                                            <button type="button" onClick={() => setF1Den('6')} className="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600 transition-all">مبنای ۶ دانگ</button>
+                                            <button type="button" onClick={() => setF1Den('100')} className="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600 transition-all">مبنای ۱۰۰ (درصد)</button>
+                                            <button type="button" onClick={() => setF1Den('10000')} className="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600 transition-all">۱۰,۰۰۰ سهمی ثبتی</button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-3">
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-600 mb-1">تاریخ تملک / صدور سند اولیه</label>
+                                                <input type="text" value={f1Date} onChange={e => setF1Date(e.target.value)} placeholder="مثال: ۱۴۰۱/۰۴/۱۲" className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-lg text-center" />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-600 mb-1">توضیحات و مستندات پرونده</label>
+                                            <textarea value={f1Notes} onChange={e => setF1Notes(e.target.value)} rows="2" placeholder="شماره سند مادر، بنچاق و غیره..." className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg resize-none"></textarea>
+                                        </div>
+
+                                        <button onClick={addOwner} className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-3 rounded-lg transition-all shadow-sm">
+                                            + ثبت و درج در لیست مالکین مبدا
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="lg:col-span-3 bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden flex flex-col">
+                                    <div className="bg-slate-50 px-4 py-3.5 border-b border-slate-200 flex justify-between items-center">
+                                        <span className="font-bold text-slate-800 text-xs">دفتر موازی مالکین اولیه ملک</span>
+                                        <span className="bg-slate-200 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded-full">{owners.length} ردیف ثبت شده</span>
+                                    </div>
+                                    {owners.length === 0 ? (
+                                        <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-400 text-xs">
+                                            <span>ثبتی انجام نشده است. ابتدا مشخصات ملک و مالکین اولیه را وارد نمایید.</span>
+                                        </div>
+                                    ) : (
+                                        <div className="overflow-x-auto text-xs">
+                                            <table className="w-full text-right border-collapse">
+                                                <thead className="bg-slate-100/70 text-slate-600 border-b border-slate-200">
+                                                    <tr>
+                                                        <th className="p-3 font-bold">نام مالک مبدا</th>
+                                                        <th className="p-3 font-bold">سهم اولیه کسر</th>
+                                                        <th className="p-3 font-bold">تاریخ مبدا</th>
+                                                        <th className="p-3 font-bold text-center">حذف ردیف</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {owners.map(o => (
+                                                        <tr key={o.id} className="hover:bg-slate-50/60 transition-all">
+                                                            <td className="p-3 font-bold text-slate-900">{o.name}</td>
+                                                            <td className="p-3"><span className="bg-slate-100 text-slate-700 font-medium px-2 py-0.5 rounded">{formatFraction(o.shareNumerator, o.shareDenominator)}</span></td>
+                                                            <td className="p-3 text-slate-500 font-medium">{o.acquisitionDate}</td>
+                                                            <td className="p-3 text-center">
+                                                                <button onClick={() => deleteOwner(o.id)} className="text-rose-600 hover:bg-rose-50 px-2 py-1 rounded-md font-bold">❌</button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* فرم ۲: انتقالات زنجیره‌ای سهم */}
+                        {activeTab === 'form2' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 no-print">
+                                <div className="lg:col-span-2 bg-white border border-slate-200 shadow-sm rounded-xl p-5">
+                                    <h2 className="text-sm font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+                                        <span className="w-5 h-5 bg-blue-100 text-blue-700 text-xs font-black rounded-md flex items-center justify-center">۲</span>
+                                        ثبت معامله / انتقال سهم
+                                    </h2>
+                                    
+                                    <div className="space-y-4">
+                                        {/* لیست کشویی هوشمند برای فروشنده */}
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-600 mb-1">مالک ناقل (فروشنده)</label>
+                                            <select value={f2Seller} onChange={e => setF2Seller(e.target.value)} className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-lg bg-white focus:outline-blue-600 font-medium">
+                                                <option value="">-- انتخاب از لیست تمام مالکین پرونده --</option>
+                                                {allNames.map(name => {
+                                                    const bal = getCurrentFraction(name);
+                                                    if (bal <= 0.000001) return null; // فروشنده‌هایی که دیگر سهم ندارند نمایش داده نمی‌شوند
+                                                    return (
+                                                        <option key={name} value={name}>
+                                                            {name} (سهم جاری: {(bal * 100).toFixed(2)}%)
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
+                                        </div>
+
+                                        {/* فیلد خریدار: انتخاب از موجودها یا تعریف شخص جدید */}
+                                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/60 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[11px] font-bold text-slate-700">مشخصات خریدار (منتقل‌الیه)</span>
+                                                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                                                    <input type="checkbox" checked={f2IsNewBuyer} onChange={e => setF2IsNewBuyer(e.target.checked)} className="rounded text-blue-600 focus:ring-0 w-3.5 h-3.5" />
+                                                    <span className="text-[10px] font-bold text-blue-700">شخص جدید خارج از لیست است؟</span>
+                                                </label>
+                                            </div>
+
+                                            {f2IsNewBuyer ? (
+                                                <div>
+                                                    <input type="text" value={f2NewBuyerName} onChange={e => setF2NewBuyerName(e.target.value)} placeholder="نام و نام خانوادگی خریدار جدید را تایپ کنید..." className="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-blue-600" />
+                                                    <p className="text-[9px] text-slate-400 mt-1">💡 پس از ثبت، این شخص به صورت خودکار به لیست کشویی اضافه خواهد شد.</p>
+                                                </div>
+                                            ) : (
+                                                <select value={f2Buyer} onChange={e => setF2Buyer(e.target.value)} className="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-blue-600 font-medium">
+                                                    <option value="">-- انتخاب خریدار از مالکین موجود --</option>
+                                                    {allNames.map(name => <option key={name} value={name}>{name}</option>)}
+                                                </select>
+                                            )}
+                                        </div>
+
+                                        {/* میزان سهم مورد انتقال */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-600 mb-1">سهم مورد انتقال (صورت)</label>
+                                                <input type="number" value={f2Num} onChange={e => setF2Num(e.target.value)} placeholder="مثلاً ۱" className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-lg text-center font-bold" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-600 mb-1">از کل مخرج سهم</label>
+                                                <input type="number" value={f2Den} onChange={e => setF2Den(e.target.value)} placeholder="مثلاً ۶" className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-lg text-center font-bold" />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-1.5 justify-center py-1">
+                                            <button type="button" onClick={() => setF2Den('6')} className="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600">مبنای ۶ دانگ</button>
+                                            <button type="button" onClick={() => setF2Den('100')} className="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600">مبنای ۱۰۰</button>
+                                            <button type="button" onClick={() => setF2Den('10000')} className="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600">۱۰,۰۰۰ سهمی</button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-3">
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-600 mb-1">تاریخ تنظیم سند معامله / انتقال</label>
+                                                <input type="text" value={f2Date} onChange={e => setF2Date(e.target.value)} placeholder="مثال: ۱۴۰۳/۱۱/۲۰" className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-lg text-center" />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-600 mb-1">شرح توافق و نوع انتقال</label>
+                                            <textarea value={f2Notes} onChange={e => setF2Notes(e.target.value)} rows="2" placeholder="عقد بیع، صلح محاباتی، معاوضه و..." className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg resize-none"></textarea>
+                                        </div>
+
+                                        <button onClick={addTransfer} className="w-full bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold py-3 rounded-lg transition-all shadow-sm">
+                                            🔄 ثبت و توقیف کسر معامله
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="lg:col-span-3 bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden flex flex-col">
+                                    <div className="bg-slate-50 px-4 py-3.5 border-b border-slate-200 flex justify-between items-center">
+                                        <span className="font-bold text-slate-800 text-xs">دفتر اندیکاتور و گردش اسناد انتقالات</span>
+                                        <span className="bg-blue-100 text-blue-800 text-[10px] font-black px-2 py-0.5 rounded-full">{transfers.length} معامله فعال</span>
+                                    </div>
+                                    {transfers.length === 0 ? (
+                                        <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-400 text-xs">
+                                            <span>تاکنون هیچ سند جابه‌جایی یا انتقال زنجیره‌ای برای این ملک ثبت نشده است.</span>
+                                        </div>
+                                    ) : (
+                                        <div className="overflow-x-auto text-xs">
+                                            <table className="w-full text-right border-collapse">
+                                                <thead className="bg-slate-100/70 text-slate-600 border-b border-slate-200">
+                                                    <tr>
+                                                        <th className="p-3 font-bold">مالک ناقل (فروشنده)</th>
+                                                        <th className="p-3 font-bold">میزان کسر معامله</th>
+                                                        <th className="p-3 font-bold">منتقل الیه (خریدار)</th>
+                                                        <th className="p-3 font-bold">تاریخ معامله</th>
+                                                        <th className="p-3 font-bold text-center">ابطال</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {transfers.map(t => (
+                                                        <tr key={t.id} className="hover:bg-slate-50/60 transition-all">
+                                                            <td className="p-3 font-bold text-red-700">{t.sellerName}</td>
+                                                            <td className="p-3">
+                                                                <span className="bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded border border-amber-200/40">
+                                                                    {formatFraction(t.transferredNumerator, t.transferredDenominator)}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-3 font-bold text-emerald-700">{t.buyerName}</td>
+                                                            <td className="p-3 text-slate-500 font-medium">{t.transferDate}</td>
+                                                            <td className="p-3 text-center">
+                                                                <button onClick={() => deleteTransfer(t.id)} className="text-slate-400 hover:text-red-500 text-sm">🗑️</button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* فرم ۳: گزارش نهایی ثبتی و تسهیم سهام */}
+                        {activeTab === 'form3' && (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200 no-print">
+                                    <span className="text-slate-500 text-xs font-medium">پرونده آماده بهره‌برداری است. جهت صدور گواهی یا پرینت رسمی روی دکمه مقابل کلیک کنید.</span>
+                                    <button onClick={() => window.print()} className="bg-slate-950 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
+                                        🖨️ چاپ صورت‌جلسه تسهیم نهایی ملک
+                                    </button>
+                                </div>
+
+                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 sm:p-12 print:border-none print:shadow-none print:p-0 print-card">
+                                    {/* سربرگ رسمی ثبتی برای پرینت */}
+                                    <div className="text-center pb-6 border-b border-slate-300 mb-6 space-y-2">
+                                        <h2 className="text-xl font-black text-slate-900">گزارش خلاصه وضعیت و تسهیم سهم پایانی مالکین مشاعی</h2>
+                                        <div className="flex flex-wrap justify-center gap-6 pt-2 text-xs text-slate-600 font-bold">
+                                            {propertyId && <div>🏢 پلاک/کلاسه پرونده ثبتی: <span className="text-slate-950">{propertyId}</span></div>}
+                                            {area > 0 && <div>📐 مساحت کل عرصه ملک مادر: <span className="text-slate-950">{area.toLocaleString()}</span> متر مربع</div>}
+                                            <div>👥 تعداد مالکین ذینفع نهایی: <span className="text-slate-950">{finalOwners.length} نفر</span></div>
+                                        </div>
+                                    </div>
+
+                                    {finalOwners.length === 0 ? (
+                                        <div className="p-12 text-center text-slate-400 text-xs">هیچ تراکنش ثبتی برای محاسبه موجود نیست.</div>
+                                    ) : (
+                                        <div className="overflow-x-auto text-xs">
+                                            <table className="w-full text-right border-collapse">
+                                                <thead>
+                                                    <tr className="bg-slate-100 text-slate-900 border-b border-slate-300 print:bg-slate-100">
+                                                        <th className="p-3 font-bold w-12 text-center">ردیف</th>
+                                                        <th className="p-3 font-bold">نام و نام خانوادگی مالک نهایی (ذینفع)</th>
+                                                        <th className="p-3 font-bold">کسر ساده‌شده سهم باقی‌مانده</th>
+                                                        <th className="p-3 font-bold">درصد مالکیت نهایی (%)</th>
+                                                        {area > 0 && <th className="p-3 font-bold">مساحت معادل تعلق‌گرفته (متر مربع)</th>}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-200 text-slate-800 font-medium">
+                                                    {finalOwners.map((fo, idx) => (
+                                                        <tr key={fo.name} className="hover:bg-slate-50/50 transition-all">
+                                                            <td className="p-3 text-center text-slate-400">{idx + 1}</td>
+                                                            <td className="p-3 font-bold text-slate-900">{fo.name}</td>
+                                                            <td className="p-3">
+                                                                <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded text-[11px] font-bold border border-slate-200/50 print:bg-transparent print:border-none">
+                                                                    {formatFraction(fo.shareNumerator, fo.shareDenominator)}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-3 font-bold text-blue-800 print:text-black">{fo.percentage.toFixed(3)} %</td>
+                                                            {area > 0 && (
+                                                                <td className="p-3 font-black text-emerald-800 print:text-black">
+                                                                    {fo.exactArea.toLocaleString()} متر مربع
+                                                                </td>
+                                                            )}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+
+                                            {/* کادر رسمی تاییدات ثبتی در زمان چاپ فرم */}
+                                            <div className="hidden print:block mt-16 pt-8 border-t border-dashed border-slate-300">
+                                                <div className="text-[10px] text-slate-400 text-left mb-8">تنظیم شده توسط سیستم یکپارچه تسهیم املاک - تاریخ گزارش: {new Date().toLocaleDateString('fa-IR')}</div>
+                                                <div className="grid grid-cols-3 gap-6 text-center font-bold text-xs text-slate-800">
+                                                    <div className="border border-slate-200 p-4 rounded-lg">محل امضاء و اثر انگشت متعاملین پرونده</div>
+                                                    <div className="border border-slate-200 p-4 rounded-lg">تصدیق هویت و تایید کارشناس اسناد ثبتی</div>
+                                                    <div className="border border-slate-200 p-4 rounded-lg">بایگانی کلاسه پلاک مادر</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* برگه راهنمای جامع استفاده اداری */}
+                        {activeTab === 'guidelines' && (
+                            <div className="max-w-3xl mx-auto bg-white border border-slate-200 shadow-sm rounded-xl p-6 text-xs leading-relaxed text-slate-600 space-y-4 no-print">
+                                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">📘 راهنمای گام‌به‌گام کاربری سامانه تسهیم مشاعی (ویژه اداره ثبت)</h2>
+                                <p>این سیستم اختصاصاً جهت پایش و محاسبه موازنه کسر سهام، بدون محاسبات دستی پیچیده طراحی شده است. فرایند اجرای پرونده‌ها به این صورت است:</p>
+                                
+                                <div className="space-y-2">
+                                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                                        <h3 className="font-bold text-slate-800 mb-1">گام اول: تعریف پرونده و پلاک مادر</h3>
+                                        <p>در تب <strong>«ثبت مالکین و سهم اولیه»</strong>، شماره پلاک ثبتی و متراژ کل عرصه زمین را وارد کنید. سپس نام تک تک افرادی که در ابتدای صورت‌جلسه یا سند تفکیکی اولیه دارای سهم بوده‌اند را به همراه کسر سهمشان وارد و دکمه ثبت را بزنید.</p>
+                                    </div>
+                                    
+                                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                                        <h3 className="font-bold text-slate-800 mb-1">گام دوم: چرخش زنجیره‌ای اسناد (انتقالات)</h3>
+                                        <p>به تب <strong>«دفتر ثبت انتقالات»</strong> بروید. نام شخص منتقل‌کننده (فروشنده) را از لیست کشویی انتخاب کنید. سیستم به صورت زنده مانده سهم او را به درصد نشان می‌دهد. اگر خریدار فرد جدیدی است، چک‌باکس را فعال کرده و نام او را بنویسید؛ در غیر این صورت خریدار را نیز از منو برگزینید. میزان کسر انتقال یافته را ثبت کنید.</p>
+                                    </div>
+
+                                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                                        <h3 className="font-bold text-slate-800 mb-1">گام سوم: فیلتراسیون خودکار ذینفعان نهایی</h3>
+                                        <p>با مراجعه به تب <strong>«خلاصه وضعیت»</strong>، سیستم به شکل خودکار تمامی لایه‌های معاملاتی را بررسی کرده، سهم‌های فروخته شده را کسر و مالکین با سهم صفر را از لیست <strong>به طور کامل حذف می‌کند</strong>. حاصل کسر ساده‌شده نهایی و متراژ دقیق سهم هر شخص به همراه کادر امضاها آماده پرینت فیزیکی یا ذخیره PDF است.</p>
+                                    </div>
+
+                                    <div className="p-3 bg-slate-900 text-slate-300 rounded-lg border border-slate-800">
+                                        <h3 className="font-bold text-white mb-1">🔒 حفاظت از داده‌ها و پشتیبان‌گیری:</h3>
+                                        <p className="text-slate-400">به دلیل حفظ کامل حریم خصوصی ثبتی، هیچ اطلاعاتی به اینترنت ارسال نمی‌شود. برای جابه‌جایی اطلاعات بین سیستم‌ها یا نگهداری پرونده‌ها، حتماً از دکمه <strong>«خروجی دیتابیس (Backup)»</strong> در بالای هدر نرم‌افزار استفاده کنید و فایل آن را در پوشه سیستم خود آرشیو نمایید.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                    </main>
+                </div>
+            );
+        }
+
+        // رندر نهایی پلتفرم
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
